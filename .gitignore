@@ -90,5 +90,5 @@ selenium
 tmp/
 temp/
 
-# Credentials (if you commit .env by mistake)
-.env.example
+# documentations
+CLAUDE.md
