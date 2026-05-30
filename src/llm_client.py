@@ -1,5 +1,5 @@
 """
-LLM Client Factory - Unified interface for OpenAI, Anthropic, and Ollama
+LLM Client Factory - Unified interface for OpenAI, Anthropic, Ollama, and NVIDIA NIM
 """
 import os
 import json
@@ -183,6 +183,88 @@ class OllamaClient(LLMClient):
         return response.iter_lines()
 
 
+class NIMClient(LLMClient):
+    """NVIDIA NIM client"""
+
+    def __init__(self, base_url: str, model: str):
+        import requests
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+
+    def chat(self, messages: List[Dict[str, str]], tools: Optional[List[Dict]] = None) -> Dict[str, Any]:
+        import requests
+
+        # NVIDIA NIM uses OpenAI-compatible API format
+        headers = {
+            "Authorization": f"Bearer {os.getenv('NIM_API_KEY', '')}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": 4096,
+            "temperature": 0.7,
+        }
+
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
+        response = requests.post(
+            f"{self.base_url}/v1/chat/completions",
+            headers=headers,
+            json=payload
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        result = {
+            "content": data["choices"][0]["message"]["content"] or "",
+            "finish_reason": data["choices"][0]["finish_reason"] or "stop",
+        }
+
+        if "tool_calls" in data["choices"][0]["message"]:
+            result["tool_calls"] = [{
+                "id": tc["id"],
+                "function": {
+                    "name": tc["function"]["name"],
+                    "arguments": tc["function"]["arguments"]
+                }
+            } for tc in data["choices"][0]["message"]["tool_calls"]]
+
+        return result
+
+    def chat_stream(self, messages: List[Dict[str, str]], tools: Optional[List[Dict]] = None):
+        import requests
+
+        # NVIDIA NIM uses OpenAI-compatible API format for streaming
+        headers = {
+            "Authorization": f"Bearer {os.getenv('NIM_API_KEY', '')}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": 4096,
+            "temperature": 0.7,
+            "stream": True,
+        }
+
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
+        response = requests.post(
+            f"{self.base_url}/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            stream=True
+        )
+        return response.iter_lines()
+
+
 def create_llm_client() -> LLMClient:
     """Factory function to create LLM client based on environment config"""
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
@@ -206,8 +288,16 @@ def create_llm_client() -> LLMClient:
         model = os.getenv("OLLAMA_MODEL", "llama3")
         return OllamaClient(base_url, model)
 
+    elif provider == "nim":
+        base_url = os.getenv("NIM_BASE_URL", "https://integrate.api.nvidia.com/v1")
+        model = os.getenv("NIM_MODEL", "mistralai/mixtral-8x22b-instruct-v0.1")
+        api_key = os.getenv("NIM_API_KEY")
+        if not api_key:
+            raise ValueError("NIM_API_KEY not set in .env")
+        return NIMClient(base_url, model)
+
     else:
-        raise ValueError(f"Unknown LLM_PROVIDER: {provider}. Use: openai, anthropic, or ollama")
+        raise ValueError(f"Unknown LLM_PROVIDER: {provider}. Use: openai, anthropic, ollama, or nim")
 
 
 # Default browser control tools for the LLM

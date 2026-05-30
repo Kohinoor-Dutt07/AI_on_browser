@@ -4,7 +4,7 @@ A Python-based AI agent that uses an LLM of your choice to control a browser and
 
 ## Features
 
-- **Multi-LLM Support**: Works with OpenAI (GPT), Anthropic (Claude), and Ollama (local LLMs)
+- **Multi-LLM Support**: Works with OpenAI (GPT), Anthropic (Claude), Ollama (local LLMs), and NVIDIA NIM
 - **Human-like Browsing**: Implements random delays, stealth modes, and adaptive decision-making
 - **Task Automation**: Can perform complex web tasks like searching, form filling, data extraction, and more
 - **Page Analysis**: Multiple analysis modes (general, products, people, trends, video)
@@ -48,10 +48,10 @@ AI Browser Agent
 
 ### Basic Tasks
 ```bash
-# Search for information
+# Search for information with default provider (OpenAI)
 python main.py "search for AI trends on Google"
 
-# Find products
+# Find products with specific provider (set LLM_PROVIDER=nim in .env)
 python main.py "find trending tech products on Amazon under $500"
 
 # Analyze a video
@@ -80,13 +80,16 @@ python main.py --test-browser
 All settings are in `.env`:
 
 ### LLM Settings
-- `LLM_PROVIDER`: openai, anthropic, or ollama
+- `LLM_PROVIDER`: openai, anthropic, ollama, or nim
 - `OPENAI_API_KEY`: Your OpenAI API key
 - `OPENAI_MODEL`: Model name (default: gpt-4o)
 - `ANTHROPIC_API_KEY`: Your Anthropic API key
 - `ANTHROPIC_MODEL`: Model name (default: claude-sonnet-4-20250514)
 - `OLLAMA_BASE_URL`: Ollama server URL (default: http://localhost:11434)
 - `OLLAMA_MODEL`: Model name (default: llama3)
+- `NIM_BASE_URL`: NVIDIA NIM server URL (default: https://integrate.api.nvidia.com/v1)
+- `NIM_MODEL`: Model name (default: mistralai/mixtral-8x22b-instruct-v0.1)
+- `NIM_API_KEY`: Your NVIDIA NIM API key
 
 ### Browser Settings
 - `BROWSER`: chrome, firefox, or edge (default: chrome)
