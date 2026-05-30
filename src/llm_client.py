@@ -145,7 +145,6 @@ class OllamaClient(LLMClient):
     """Ollama local LLM client"""
 
     def __init__(self, base_url: str, model: str):
-        import requests
         self.base_url = base_url.rstrip("/")
         self.model = model
 
@@ -158,7 +157,6 @@ class OllamaClient(LLMClient):
             "stream": False,
         }
 
-        # Ollama doesn't support tools in the same way
         response = requests.post(f"{self.base_url}/api/chat", json=payload)
         response.raise_for_status()
         data = response.json()
@@ -187,8 +185,16 @@ class NIMClient(LLMClient):
     """NVIDIA NIM client"""
 
     def __init__(self, base_url: str, model: str):
-        import requests
-        self.base_url = base_url.rstrip("/")
+        # FIX: Sanitize the base URL string to remove trailing slashes or hidden newlines
+        cleaned_url = base_url.strip().rstrip("/")
+        
+        # If the URL already contains the version path string '/v1', slice it off
+        # so appending '/v1/chat/completions' below doesn't duplicate the route
+        if cleaned_url.endswith("/v1"):
+            self.base_url = cleaned_url[:-3]
+        else:
+            self.base_url = cleaned_url
+
         self.model = model
 
     def chat(self, messages: List[Dict[str, str]], tools: Optional[List[Dict]] = None) -> Dict[str, Any]:

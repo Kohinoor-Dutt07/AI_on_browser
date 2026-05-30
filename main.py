@@ -7,12 +7,16 @@ import os
 import sys
 import asyncio
 import argparse
-import colorlog
 from dotenv import load_dotenv
 import logging
 import colorlog
+
 # Load environment variables
 load_dotenv()
+
+# GitHub Codespaces Sandbox Safeguard: Force headless mode if running in a cloud container
+if os.getenv("CODESPACES") == "true":
+    os.environ["HEADLESS"] = "true"
 
 # Setup logging
 logging_config = {
@@ -22,20 +26,20 @@ logging_config = {
 
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 if log_level == "DEBUG":
-    logging_config["level"] = colorlog.logging.DEBUG
+    logging_config["level"] = logging.DEBUG
 else:
-    logging_config["level"] = colorlog.logging.INFO
+    logging_config["level"] = logging.INFO
 
 colorlog.basicConfig(**logging_config)
 logger = colorlog.getLogger(__name__)
 
 
-async def test_browser():
+async def test_browser(headless: bool):
     """Quick test to verify browser works"""
     from src.browser_controller import BrowserController
 
     logger.info("Testing browser controller...")
-    controller = BrowserController(headless=False)
+    controller = BrowserController(headless=headless)
 
     try:
         await controller.start()
@@ -66,7 +70,7 @@ async def test_browser():
         await controller.close()
 
 
-async def run_task(task: str):
+async def run_task(task: str, headless: bool):
     """Run a task with the AI browser agent"""
     from src.browser_controller import BrowserController
     from src.task_engine import TaskEngine
@@ -74,7 +78,7 @@ async def run_task(task: str):
     logger.info(f"Starting task: {task}")
 
     # Initialize
-    controller = BrowserController(headless=False)
+    controller = BrowserController(headless=headless)
     engine = TaskEngine()
 
     try:
@@ -114,14 +118,14 @@ async def run_task(task: str):
         await controller.close()
 
 
-async def interactive_mode():
+async def interactive_mode(headless: bool):
     """Run in interactive mode - enter tasks via console"""
     from src.browser_controller import BrowserController
     from src.task_engine import TaskEngine
 
     logger.info("Starting interactive mode. Type 'exit' to quit.")
 
-    controller = BrowserController(headless=False)
+    controller = BrowserController(headless=headless)
     engine = TaskEngine()
 
     try:
@@ -175,25 +179,29 @@ def main():
     parser.add_argument(
         "--headless",
         action="store_true",
+        default=True,  # Default to True to protect remote server environments
         help="Run browser in headless mode"
     )
 
     args = parser.parse_args()
 
-    # Handle headless mode via env
-    if args.headless:
+    # Sync environment flag state
+    if args.headless or os.getenv("HEADLESS") == "true":
         os.environ["HEADLESS"] = "true"
+        is_headless = True
+    else:
+        is_headless = False
 
     if args.test_browser:
-        success = asyncio.run(test_browser())
+        success = asyncio.run(test_browser(headless=is_headless))
         sys.exit(0 if success else 1)
 
     if args.interactive:
-        asyncio.run(interactive_mode())
+        asyncio.run(interactive_mode(headless=is_headless))
         sys.exit(0)
 
     if args.task:
-        result = asyncio.run(run_task(args.task))
+        result = asyncio.run(run_task(args.task, headless=is_headless))
         sys.exit(0 if result.get("success") else 1)
 
     # No arguments provided

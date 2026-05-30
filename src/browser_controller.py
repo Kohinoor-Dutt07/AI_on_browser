@@ -56,7 +56,7 @@ class BrowserController:
         launch_args = []
 
         if self.stealth:
-            # Anti-detection arguments
+            # Anti-detection arguments optimized for Linux containers/Codespaces
             launch_args.extend([
                 "--disable-blink-features=AutomationControlled",
                 "--disable-dev-shm-usage",
@@ -82,12 +82,12 @@ class BrowserController:
 
         self.context = await self.browser.new_context(**context_options)
 
+        # FIX: Create the page FIRST before configuring page-level stealth hooks
+        self.page = await self.context.new_page()
+
         # Apply stealth if enabled
         if self.stealth:
             await self._apply_stealth()
-
-        # Create page
-        self.page = await self.context.new_page()
 
         # Set default timeout
         self.page.set_default_timeout(30000)
@@ -216,10 +216,11 @@ class BrowserController:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def search_google(self, query: str) -> Dict[str, Any]:
-        """Search Google for a query"""
+    async def search_duckduckgo(self, query: str) -> Dict[str, Any]:
+        """Search DuckDuckGo instead of Google to bypass datacenter blocks"""
         encoded_query = query.replace(" ", "+")
-        return await self.navigate(f"https://www.google.com/search?q={encoded_query}")
+        # Using the standard HTML-only layout is incredibly fast and clean for agents
+        return await self.navigate(f"https://html.duckduckgo.com/html/?q={encoded_query}")
 
     async def execute_script(self, script: str) -> Dict[str, Any]:
         """Execute custom JavaScript"""
@@ -260,7 +261,6 @@ class BrowserController:
     # Credential management
     async def login(self, site: str, credentials: Dict[str, str]) -> Dict[str, Any]:
         """Attempt to login to a site (simplified - requires site-specific logic)"""
-        # This would need to be customized per-site
         return {"success": False, "error": "Site-specific login not implemented"}
 
 
