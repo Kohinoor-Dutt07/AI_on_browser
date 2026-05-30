@@ -92,3 +92,6 @@ temp/
 
 # documentations
 CLAUDE.md
+
+# agent essentials 
+.claude/
