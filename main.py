@@ -9,7 +9,8 @@ import asyncio
 import argparse
 import colorlog
 from dotenv import load_dotenv
-
+import logging
+import colorlog
 # Load environment variables
 load_dotenv()
 
